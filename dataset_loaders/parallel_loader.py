@@ -593,7 +593,8 @@ class ThreadedDataset(object):
                 void_label=self.void_labels,
                 **self.data_augm_kwargs)
 
-            if self.set_has_GT and self._void_labels != []:
+            if self.set_has_GT and self._void_labels != [] or \
+                max(self._cmap.keys()) > self.non_void_nclasses-1:
                 # Map all void classes to non_void_nclasses and shift the other
                 # values accordingly, so that the valid values are between 0
                 # and non_void_nclasses-1 and the void_classes are all equal to
@@ -637,6 +638,17 @@ class ThreadedDataset(object):
                 if self.set_has_GT and self.return_one_hot:
                     seq_y = seq_y.transpose([0, 3, 1, 2])
                 raw_data = raw_data.transpose([0, 3, 1, 2])
+                if seq_x.shape[3] == 1:
+                    seq_x = seq_x.squeeze(3)
+                    seq_y = seq_y.squeeze(3) if self.return_one_hot else \
+                        seq_y.squeeze(2)
+                    raw_data = raw_data.squeeze(3)
+            else:
+                if seq_x.shape[2] == 1:
+                    seq_x = seq_x.squeeze(2)
+                    seq_y = seq_y.squeeze(2) if self.return_one_hot else \
+                        seq_y.squeeze(1)
+                    raw_data = raw_data.squeeze(2)
 
             # Return 4D images
             if not self.return_sequence:
@@ -647,6 +659,7 @@ class ThreadedDataset(object):
 
             if self.return_0_255:
                 seq_x = (seq_x * 255).astype('uint8')
+
             ret['data'], ret['labels'] = seq_x, seq_y
             ret['raw_data'] = raw_data
             # Append the data of this batch to the minibatch array
